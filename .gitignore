@@ -57,6 +57,7 @@ eln-cache/
 .cache/
 
 # Package files
+tree-sitter/
 elpa/
 quelpa/
 
