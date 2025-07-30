@@ -1,0 +1,185 @@
+#+TITLE: Emacs Configuration
+#+AUTHOR: Matt Barlow
+#+DESCRIPTION: A minimal, modern Emacs configuration built up gradually with a focus on simplicity and functionality.
+
+* Features
+
+** Core Settings
+- *Package Management*: Using straight.el for reproducible package installation
+- *Clean UI*: Minimal interface with line numbers and current line highlighting
+- *Smart Defaults*: Organized backups, auto-saves, and recent file tracking
+- *Better Editing*: Electric pairs, delete-selection mode, and smooth scrolling
+- *Emacs Server*: Automatically starts server for emacsclient usage
+
+** Modern Completion System
+- *Vertico*: Modern minibuffer completion UI
+- *Orderless*: Flexible completion matching
+- *Marginalia*: Rich annotations in the minibuffer
+- *Consult*: Enhanced search and navigation commands
+- *Corfu*: In-buffer completion popups with auto-completion
+- *Cape*: Additional completion backends
+- *Which-key*: Interactive command discovery
+
+** Programming Support
+- *Magit*: Best-in-class Git interface
+- *Eglot*: Built-in LSP support configured for multiple languages
+- *Tree-sitter*: Enhanced syntax highlighting with automatic mode remapping
+- *hl-todo*: Highlights TODO, FIXME, and other keywords in code
+
+** Quality of Life
+- *Doom Themes*: Color schemes
+- *Doom Modeline*: Modern, informative mode line with icons
+- *Rainbow Delimiters*: Colorized matching parentheses
+- *Helpful*: Enhanced help system with better documentation
+- *All The Icons*: Icon support for doom-modeline
+- *Highlight Indent Guides*: Visual indentation guides
+- *Smooth Scrolling*: Better scrolling experience
+- *Ace Window*: Quick window switching
+- *Undo Tree*: Visual undo history
+- *Vterm*: Full terminal emulation
+
+* Requirements
+
+- Emacs 29 or later (for built-in Eglot and Tree-sitter support)
+- Git (for straight.el)
+- Internet connection (for initial package downloads)
+
+* Installation
+
+1. Clone or copy this configuration to =~/.emacs.d/=
+2. Start Emacs - packages will be automatically installed on first run
+3. Restart Emacs after the initial setup completes
+4. (Optional) Run =M-x all-the-icons-install-fonts= to install icon fonts
+5. (Optional) Run =M-x my/install-treesit-grammars= to install tree-sitter grammars
+
+* Directory Structure
+
+#+begin_example
+~/.emacs.d/
+├── init.el          # Main configuration file
+├── README.org       # This file
+├── straight/        # Package manager directory (auto-created)
+├── backups/         # Backup files (auto-created)
+├── auto-saves/      # Auto-save files (auto-created)
+├── undo/            # Undo history (auto-created)
+└── custom.el        # Customizations (auto-created)
+#+end_example
+
+* Key Bindings
+
+** Navigation & Search (Consult)
+- =C-x b= - Enhanced buffer switching
+- =M-g g= / =M-g M-g= - Go to line
+- =M-g i= - Jump to imenu item (functions, classes, etc.)
+- =M-s l= - Search lines in current buffer
+- =M-s r= - Ripgrep search in project
+- =M-s g= - Grep search
+- =M-y= - Enhanced yank (paste) from kill ring
+
+** Completion (Cape)
+- =C-c p d= - Complete word from current buffer (dabbrev)
+- =C-c p f= - Complete file path
+- =C-c p h= - Complete from history
+- =C-c p l= - Complete entire line
+
+** Minibuffer
+- =M-A= - Cycle marginalia annotation styles
+- =TAB= / =S-TAB= - Navigate completion candidates (in Corfu popups)
+
+** Help
+- =C-h= followed by any prefix - Shows all bindings for that prefix (which-key)
+
+** Git (Magit)
+- =C-x g= - Open Magit status
+- =C-x M-g= - Magit dispatch (all commands)
+- =C-c g= - Magit file commands
+
+** LSP (Eglot)
+When in a file with LSP support:
+- =C-c l r= - Rename symbol
+- =C-c l a= - Code actions
+- =C-c l f= - Format region
+- =C-c l F= - Format buffer
+- =C-c l d= - Go to definition
+- =C-c l D= - Find references
+- =C-c l i= - Find implementations
+
+** Window Management
+- =M-o= - Ace window (quick window switching with letters)
+
+** Enhanced Help (Helpful)
+- =C-h f= - Describe function (enhanced)
+- =C-h v= - Describe variable (enhanced)
+- =C-h k= - Describe key (enhanced)
+- =C-c C-d= - Helpful at point
+- =C-h F= - Describe function
+- =C-h C= - Describe command
+
+** Terminal
+- =M-x vterm= - Open terminal emulator
+
+* Programming Language Support
+
+** LSP Servers
+Eglot will automatically start LSP servers for supported languages. Make sure you have the appropriate language servers installed:
+- *Python*: =pip install python-lsp-server[all]=
+- *JavaScript/TypeScript*: =npm install -g typescript typescript-language-server=
+- *Rust*: =rustup component add rust-analyzer=
+- *Go*: =go install golang.org/x/tools/gopls@latest=
+- *C/C++*: =clangd= (usually comes with clang)
+- *Java*: Eclipse JDT Language Server
+
+** Tree-sitter Grammars
+To install tree-sitter grammars for enhanced syntax highlighting:
+1. Run =M-x my/install-treesit-grammars=
+2. Restart Emacs
+3. Supported languages will automatically use tree-sitter modes
+
+* Theme Customization
+
+The configuration uses =doom-one= theme by default. To change themes:
+1. Browse available themes with =M-x consult-theme=
+2. To make permanent, add to your =custom.el=:
+   #+begin_src emacs-lisp
+   (load-theme 'doom-monokai-pro t)  ; or any other doom theme
+   #+end_src
+
+Available doom themes include:
+- =doom-one= (default)
+- =doom-one-light=
+- =doom-dracula=
+- =doom-monokai-pro=
+- =doom-nord=
+- =doom-solarized-dark=
+- =doom-tomorrow-night=
+- And many more...
+
+* Emacs Server & Client
+
+The configuration automatically starts an Emacs server on launch, allowing you to use =emacsclient= for quick file editing:
+
+** Quick editing from terminal:
+#+begin_src bash
+emacsclient -n file.txt     # Open in existing Emacs (no wait)
+emacsclient file.txt        # Open and wait for close
+emacsclient -c file.txt     # Open in new frame
+emacsclient -t file.txt     # Open in terminal
+#+end_src
+
+** Set as default editor:
+Add to your shell configuration:
+#+begin_src bash
+export EDITOR="emacsclient -t"
+export VISUAL="emacsclient -c -a emacs"
+#+end_src
+
+** Useful aliases:
+#+begin_src bash
+alias e="emacsclient -n"
+alias et="emacsclient -t"
+alias ec="emacsclient -c"
+#+end_src
+
+* Customization
+
+Personal customizations should go in =custom.el= which is automatically loaded but kept separate from the main configuration.

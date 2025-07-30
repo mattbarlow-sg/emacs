@@ -1,0 +1,516 @@
+;;; init.el --- Emacs configuration -*- lexical-binding: t; -*-
+
+;;; Commentary:
+;; A minimal, modern Emacs configuration.
+
+;;; Code:
+
+;;; Phase 1: Core Settings & Package Management
+
+;; Performance optimization during startup
+(setq gc-cons-threshold (* 50 1000 1000))  ; 50MB
+
+;; Package management with straight.el
+(defvar bootstrap-version)
+(let ((bootstrap-file
+       (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
+      (bootstrap-version 6))
+  (unless (file-exists-p bootstrap-file)
+    (with-current-buffer
+        (url-retrieve-synchronously
+         "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
+         'silent 'inhibit-cookies)
+      (goto-char (point-max))
+      (eval-print-last-sexp)))
+  (load bootstrap-file nil 'nomessage))
+
+;; Use straight.el for use-package
+(straight-use-package 'use-package)
+(setq straight-use-package-by-default t)
+
+;;; Basic UI improvements
+
+;; Clean up the interface
+(setq inhibit-startup-message t)      ; No splash screen
+(scroll-bar-mode -1)                  ; Disable visible scrollbar
+(tool-bar-mode -1)                    ; Disable the toolbar
+(tooltip-mode -1)                     ; Disable tooltips
+(set-fringe-mode 10)                  ; Give some breathing room
+(menu-bar-mode -1)                    ; Disable the menu bar
+
+;; Font configuration (keeping your existing setup)
+(set-face-attribute 'default nil :font "Iosevka Nerd Font Mono-12")
+
+;; Line numbers
+(column-number-mode)                  ; Show column number in mode line
+(global-display-line-numbers-mode t)  ; Show line numbers in all buffers
+
+;; Disable line numbers for some modes
+(dolist (mode '(org-mode-hook
+                term-mode-hook
+                shell-mode-hook
+                eshell-mode-hook
+                vterm-mode-hook
+                treemacs-mode-hook))
+  (add-hook mode (lambda () (display-line-numbers-mode 0))))
+
+;; Highlight current line
+(global-hl-line-mode t)
+
+;; Better scrolling
+(setq scroll-conservatively 101)      ; Scroll one line at a time
+(setq scroll-margin 5)                ; Keep 5 lines above/below cursor
+(setq mouse-wheel-progressive-speed nil)
+(setq mouse-wheel-scroll-amount '(1 ((shift) . 1)))
+
+;;; Essential editing features
+
+;; Better selection behavior
+(delete-selection-mode t)             ; Typing replaces selected text
+
+;; Auto-save and backup management
+(setq auto-save-default t)
+(setq make-backup-files t)
+
+;; Put all backups in one directory
+(setq backup-directory-alist
+      `(("." . ,(expand-file-name "backups" user-emacs-directory))))
+
+;; Put auto-save files in a separate directory
+(setq auto-save-file-name-transforms
+      `((".*" ,(expand-file-name "auto-saves/" user-emacs-directory) t)))
+
+;; Create directories if they don't exist
+(make-directory (expand-file-name "backups" user-emacs-directory) t)
+(make-directory (expand-file-name "auto-saves" user-emacs-directory) t)
+(make-directory (expand-file-name "undo" user-emacs-directory) t)
+
+;; Recent files
+(use-package recentf
+  :straight nil  ; Built-in package
+  :config
+  (setq recentf-max-menu-items 50)
+  (setq recentf-max-saved-items 100)
+  (recentf-mode 1))
+
+;; Remember cursor position in files
+(save-place-mode 1)
+
+;; Refresh buffers when files change on disk
+(global-auto-revert-mode 1)
+(setq global-auto-revert-non-file-buffers t)
+
+;; Smoother rendering
+(setq-default truncate-lines t)      ; Don't wrap lines by default
+(setq-default indent-tabs-mode nil)  ; Use spaces instead of tabs
+(setq-default tab-width 4)           ; Set width of tabs
+
+;; Show matching parentheses
+(show-paren-mode 1)
+
+;; Electric pair mode - auto-close brackets
+(electric-pair-mode 1)
+
+;; Better help
+(setq help-window-select t)          ; Focus help window when opened
+
+;;; Phase 2: Modern Completion System
+
+;; Vertico - Modern minibuffer completion UI
+(use-package vertico
+  :init
+  (vertico-mode)
+  :config
+  (setq vertico-count 15)             ; Show more candidates
+  (setq vertico-cycle t))             ; Enable cycling for `vertico-next/previous'
+
+;; Persist history over Emacs restarts. Vertico sorts by history position.
+(use-package savehist
+  :straight nil
+  :init
+  (savehist-mode))
+
+;; Orderless - Flexible completion style
+(use-package orderless
+  :init
+  (setq completion-styles '(orderless basic)
+        completion-category-defaults nil
+        completion-category-overrides '((file (styles partial-completion)))))
+
+;; Marginalia - Rich annotations in the minibuffer
+(use-package marginalia
+  :bind (:map minibuffer-local-map
+         ("M-A" . marginalia-cycle))
+  :init
+  (marginalia-mode))
+
+;; Consult - Enhanced search and navigation commands
+(use-package consult
+  :bind (;; C-c bindings (mode-specific-map)
+         ("C-c h" . consult-history)
+         ("C-c m" . consult-mode-command)
+         ("C-c k" . consult-kmacro)
+         ;; C-x bindings (ctl-x-map)
+         ("C-x M-:" . consult-complex-command)
+         ("C-x b" . consult-buffer)
+         ("C-x 4 b" . consult-buffer-other-window)
+         ("C-x 5 b" . consult-buffer-other-frame)
+         ("C-x r b" . consult-bookmark)
+         ("C-x p b" . consult-project-buffer)
+         ;; Custom M-# bindings for fast register access
+         ("M-#" . consult-register-load)
+         ("M-'" . consult-register-store)
+         ("C-M-#" . consult-register)
+         ;; Other custom bindings
+         ("M-y" . consult-yank-pop)
+         ;; M-g bindings (goto-map)
+         ("M-g e" . consult-compile-error)
+         ("M-g f" . consult-flymake)
+         ("M-g g" . consult-goto-line)
+         ("M-g M-g" . consult-goto-line)
+         ("M-g o" . consult-outline)
+         ("M-g m" . consult-mark)
+         ("M-g k" . consult-global-mark)
+         ("M-g i" . consult-imenu)
+         ("M-g I" . consult-imenu-multi)
+         ;; M-s bindings (search-map)
+         ("M-s d" . consult-find)
+         ("M-s D" . consult-locate)
+         ("M-s g" . consult-grep)
+         ("M-s G" . consult-git-grep)
+         ("M-s r" . consult-ripgrep)
+         ("M-s l" . consult-line)
+         ("M-s L" . consult-line-multi)
+         ("M-s k" . consult-keep-lines)
+         ("M-s u" . consult-focus-lines)
+         ;; Isearch integration
+         ("M-s e" . consult-isearch-history)
+         :map isearch-mode-map
+         ("M-e" . consult-isearch-history)
+         ("M-s e" . consult-isearch-history)
+         ("M-s l" . consult-line)
+         ("M-s L" . consult-line-multi)
+         ;; Minibuffer history
+         :map minibuffer-local-map
+         ("M-s" . consult-history)
+         ("M-r" . consult-history))
+  :hook (completion-list-mode . consult-preview-at-point-mode)
+  :init
+  (setq register-preview-delay 0.5
+        register-preview-function #'consult-register-format)
+  (advice-add #'register-preview :override #'consult-register-window)
+  :config
+  (consult-customize
+   consult-theme :preview-key '(:debounce 0.2 any)
+   consult-ripgrep consult-git-grep consult-grep
+   consult-bookmark consult-recent-file consult-xref
+   consult--source-bookmark consult--source-file-register
+   consult--source-recent-file consult--source-project-recent-file
+   :preview-key '(:debounce 0.4 any))
+  (setq consult-narrow-key "<"))
+
+;; Corfu - In-buffer completion popup
+(use-package corfu
+  :custom
+  (corfu-cycle t)                ; Enable cycling for `corfu-next/previous'
+  (corfu-auto t)                 ; Enable auto completion
+  (corfu-separator ?\s)          ; Orderless field separator
+  (corfu-quit-no-match nil)      ; Never quit, even if there is no match
+  (corfu-preview-current nil)    ; Disable current candidate preview
+  (corfu-preselect 'prompt)      ; Preselect the prompt
+  (corfu-on-exact-match nil)     ; Configure handling of exact matches
+  (corfu-scroll-margin 5)        ; Use scroll margin
+  :bind
+  (:map corfu-map
+        ("TAB" . corfu-next)
+        ([tab] . corfu-next)
+        ("S-TAB" . corfu-previous)
+        ([backtab] . corfu-previous))
+  :init
+  (global-corfu-mode))
+
+;; Cape - Additional completion backends
+(use-package cape
+  :bind (("C-c p p" . completion-at-point) ; capf
+         ("C-c p t" . complete-tag)        ; etags
+         ("C-c p d" . cape-dabbrev)        ; or dabbrev-completion
+         ("C-c p h" . cape-history)
+         ("C-c p f" . cape-file)
+         ("C-c p k" . cape-keyword)
+         ("C-c p s" . cape-symbol)
+         ("C-c p a" . cape-abbrev)
+         ("C-c p i" . cape-ispell)
+         ("C-c p l" . cape-line)
+         ("C-c p w" . cape-dict)
+         ("C-c p \\" . cape-tex)
+         ("C-c p _" . cape-tex)
+         ("C-c p ^" . cape-tex)
+         ("C-c p &" . cape-sgml)
+         ("C-c p r" . cape-rfc1345))
+  :init
+  ;; Add `completion-at-point-functions', used by `completion-at-point'.
+  (add-to-list 'completion-at-point-functions #'cape-dabbrev)
+  (add-to-list 'completion-at-point-functions #'cape-file)
+  (add-to-list 'completion-at-point-functions #'cape-history)
+  (add-to-list 'completion-at-point-functions #'cape-keyword)
+  (add-to-list 'completion-at-point-functions #'cape-tex)
+  (add-to-list 'completion-at-point-functions #'cape-sgml)
+  (add-to-list 'completion-at-point-functions #'cape-rfc1345)
+  (add-to-list 'completion-at-point-functions #'cape-abbrev)
+  (add-to-list 'completion-at-point-functions #'cape-ispell)
+  (add-to-list 'completion-at-point-functions #'cape-dict)
+  (add-to-list 'completion-at-point-functions #'cape-symbol)
+  (add-to-list 'completion-at-point-functions #'cape-line))
+
+;; Which-key - Shows available keybindings in a popup
+(use-package which-key
+  :init
+  (which-key-mode)
+  :config
+  (setq which-key-idle-delay 0.5))
+
+;;; Phase 3: Programming Support
+
+;; Magit - Git integration
+(use-package magit
+  :bind (("C-x g" . magit-status)
+         ("C-x M-g" . magit-dispatch)
+         ("C-c g" . magit-file-dispatch))
+  :config
+  (setq magit-display-buffer-function #'magit-display-buffer-same-window-except-diff-v1))
+
+;; Built-in Eglot configuration (LSP support)
+(use-package eglot
+  :straight nil  ; Built-in package
+  :hook ((python-mode . eglot-ensure)
+         (js-mode . eglot-ensure)
+         (typescript-mode . eglot-ensure)
+         (rust-mode . eglot-ensure)
+         (go-mode . eglot-ensure)
+         (c-mode . eglot-ensure)
+         (c++-mode . eglot-ensure)
+         (java-mode . eglot-ensure))
+  :bind (:map eglot-mode-map
+         ("C-c l r" . eglot-rename)
+         ("C-c l a" . eglot-code-actions)
+         ("C-c l f" . eglot-format)
+         ("C-c l F" . eglot-format-buffer)
+         ("C-c l d" . xref-find-definitions)
+         ("C-c l D" . xref-find-references)
+         ("C-c l h" . eldoc)
+         ("C-c l i" . eglot-find-implementation))
+  :config
+  ;; Optimize performance
+  (setq eglot-autoshutdown t)  ; Shutdown language server after closing last file
+  (setq eglot-sync-connect 1)  ; Wait 1 second for server to start
+  (setq eglot-connect-timeout 10)  ; 10 second connection timeout
+  
+  ;; Disable specific features for performance
+  (setq eglot-ignored-server-capabilities
+        '(:documentHighlightProvider))  ; Can be slow in large files
+  
+  ;; Configure logging
+  (setq eglot-events-buffer-size 0))  ; Disable event logging for performance
+
+;; Enhance Eglot with Cape
+(use-package cape
+  :hook ((eglot-managed-mode . (lambda ()
+                                 (setq-local completion-at-point-functions
+                                           (list (cape-super-capf
+                                                  #'eglot-completion-at-point
+                                                  #'cape-dabbrev
+                                                  #'cape-file))))))
+  :init
+  ;; Silence the pcomplete capf, no errors or messages!
+  (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-silent)
+  ;; Ensure that pcomplete does not write to the buffer and behaves as a pure `completion-at-point-function'.
+  (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify))
+
+;; Tree-sitter configuration (built-in for Emacs 29+)
+(use-package treesit
+  :straight nil  ; Built-in package
+  :config
+  ;; Configure tree-sitter languages
+  (setq treesit-language-source-alist
+        '((bash "https://github.com/tree-sitter/tree-sitter-bash")
+          (c "https://github.com/tree-sitter/tree-sitter-c")
+          (cmake "https://github.com/uyha/tree-sitter-cmake")
+          (cpp "https://github.com/tree-sitter/tree-sitter-cpp")
+          (css "https://github.com/tree-sitter/tree-sitter-css")
+          (elisp "https://github.com/Wilfred/tree-sitter-elisp")
+          (go "https://github.com/tree-sitter/tree-sitter-go")
+          (html "https://github.com/tree-sitter/tree-sitter-html")
+          (java "https://github.com/tree-sitter/tree-sitter-java")
+          (javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src")
+          (json "https://github.com/tree-sitter/tree-sitter-json")
+          (make "https://github.com/alemuller/tree-sitter-make")
+          (markdown "https://github.com/ikatyang/tree-sitter-markdown")
+          (python "https://github.com/tree-sitter/tree-sitter-python")
+          (rust "https://github.com/tree-sitter/tree-sitter-rust")
+          (toml "https://github.com/tree-sitter/tree-sitter-toml")
+          (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
+          (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
+          (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
+  
+  ;; Remap major modes to use tree-sitter variants when available
+  (setq major-mode-remap-alist
+        '((yaml-mode . yaml-ts-mode)
+          (bash-mode . bash-ts-mode)
+          (js2-mode . js-ts-mode)
+          (javascript-mode . js-ts-mode)
+          (js-mode . js-ts-mode)
+          (typescript-mode . typescript-ts-mode)
+          (json-mode . json-ts-mode)
+          (css-mode . css-ts-mode)
+          (python-mode . python-ts-mode)
+          (go-mode . go-ts-mode)
+          (rust-mode . rust-ts-mode)
+          (c-mode . c-ts-mode)
+          (c++-mode . c++-ts-mode)
+          (java-mode . java-ts-mode))))
+
+;; Function to install tree-sitter grammars
+(defun my/install-treesit-grammars ()
+  "Install all configured tree-sitter grammars."
+  (interactive)
+  (mapc #'treesit-install-language-grammar
+        (mapcar #'car treesit-language-source-alist)))
+
+;; Additional programming utilities
+(use-package electric
+  :straight nil  ; Built-in
+  :config
+  (electric-indent-mode 1))  ; Auto-indent on newline
+
+;; Highlight TODO, FIXME, etc.
+(use-package hl-todo
+  :hook (prog-mode . hl-todo-mode)
+  :config
+  (setq hl-todo-keyword-faces
+        '(("TODO"   . "#FF0000")
+          ("FIXME"  . "#FF0000")
+          ("DEBUG"  . "#A020F0")
+          ("GOTCHA" . "#FF4500")
+          ("STUB"   . "#1E90FF"))))
+
+;;; Phase 4: Quality of Life
+
+;; Doom Themes - Beautiful color schemes
+(use-package doom-themes
+  :config
+  ;; Global settings (defaults)
+  (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
+        doom-themes-enable-italic t) ; if nil, italics is universally disabled
+  
+  ;; Load the theme (doom-one is a nice dark theme)
+  (load-theme 'doom-one t)
+  
+  ;; Enable flashing mode-line on errors
+  (doom-themes-visual-bell-config)
+  
+  ;; Corrects (and improves) org-mode's native fontification
+  (doom-themes-org-config))
+
+;; Doom Modeline - A fancy and fast mode-line
+(use-package doom-modeline
+  :init (doom-modeline-mode 1)
+  :config
+  (setq doom-modeline-height 25)
+  (setq doom-modeline-bar-width 3)
+  (setq doom-modeline-window-width-limit fill-column)
+  (setq doom-modeline-project-detection 'auto)
+  (setq doom-modeline-buffer-file-name-style 'relative-to-project)
+  (setq doom-modeline-icon t)  ; Enable icons (requires nerd fonts)
+  (setq doom-modeline-major-mode-icon t)
+  (setq doom-modeline-major-mode-color-icon t)
+  (setq doom-modeline-buffer-state-icon t)
+  (setq doom-modeline-buffer-modification-icon t)
+  (setq doom-modeline-unicode-fallback nil)
+  (setq doom-modeline-minor-modes nil)
+  (setq doom-modeline-enable-word-count nil)
+  (setq doom-modeline-buffer-encoding nil)
+  (setq doom-modeline-indent-info nil)
+  (setq doom-modeline-checker-simple-format t)
+  (setq doom-modeline-vcs-max-length 12)
+  (setq doom-modeline-env-version t)
+  (setq doom-modeline-irc-stylize 'identity)
+  (setq doom-modeline-github-timer nil)
+  (setq doom-modeline-gnus-timer nil))
+
+;; Rainbow Delimiters - Colorize matching parentheses
+(use-package rainbow-delimiters
+  :hook (prog-mode . rainbow-delimiters-mode))
+
+;; Helpful - Better help system
+(use-package helpful
+  :bind
+  ([remap describe-function] . helpful-callable)
+  ([remap describe-command] . helpful-command)
+  ([remap describe-variable] . helpful-variable)
+  ([remap describe-key] . helpful-key)
+  ("C-c C-d" . helpful-at-point)
+  ("C-h F" . helpful-function)
+  ("C-h C" . helpful-command)
+  :init
+  ;; Suppress native compiler warning about shortdoc-function-groups
+  (declare-function shortdoc-function-groups "shortdoc" nil))
+
+;; All the icons (required by doom-modeline)
+;; Note: Run M-x all-the-icons-install-fonts on first install
+(use-package all-the-icons
+  :if (display-graphic-p))
+
+;; Additional visual enhancements
+(use-package highlight-indent-guides
+  :hook (prog-mode . highlight-indent-guides-mode)
+  :config
+  (setq highlight-indent-guides-method 'character)
+  (setq highlight-indent-guides-responsive 'stack)
+  (setq highlight-indent-guides-delay 0))
+
+;; Smooth scrolling
+(use-package smooth-scrolling
+  :config
+  (smooth-scrolling-mode 1)
+  (setq smooth-scroll-margin 5))
+
+;; Better window management
+(use-package ace-window
+  :bind ("M-o" . ace-window)
+  :config
+  (setq aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l)))
+
+;; Undo tree visualization
+(use-package undo-tree
+  :init
+  (global-undo-tree-mode)
+  :config
+  (setq undo-tree-visualizer-timestamps t)
+  (setq undo-tree-visualizer-diff t)
+  (setq undo-tree-history-directory-alist '(("." . "~/.emacs.d/undo"))))
+
+;; Better terminal emulation
+(use-package vterm
+  :commands vterm
+  :config
+  (setq vterm-max-scrollback 10000))
+
+;; Restore gc threshold after startup
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (setq gc-cons-threshold (* 2 1000 1000))))  ; 2MB
+
+;; Start Emacs server for emacsclient
+(use-package server
+  :straight nil  ; Built-in package
+  :config
+  (unless (server-running-p)
+    (server-start)))
+
+;; Custom file (don't clutter init.el)
+(setq custom-file (expand-file-name "custom.el" user-emacs-directory))
+(when (file-exists-p custom-file)
+  (load custom-file))
+
+(provide 'init)
+;;; init.el ends here

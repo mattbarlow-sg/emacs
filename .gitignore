@@ -1,0 +1,72 @@
+# Straight.el
+straight/
+
+# Backup files
+backups/
+auto-saves/
+history
+undo/
+
+# Emacs temporary files
+*~
+\#*\#
+.\#*
+*.elc
+*.eln
+
+# Custom configuration
+custom.el
+
+# Emacs server
+server/
+
+# Session files
+.emacs.desktop
+.emacs.desktop.lock
+session.*
+
+# Recent files
+recentf
+
+# Save files
+places
+.saves-*
+
+# Projectile
+projectile-bookmarks.eld
+.projectile
+
+# Treemacs
+.treemacs-persist
+
+# LSP
+.lsp-session-*
+.dap-breakpoints
+
+# Transient
+transient/
+
+# URL cache
+url/
+
+# Network security
+network-security.data
+
+# Emacs directory cache
+eln-cache/
+.cache/
+
+# Package files
+elpa/
+quelpa/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Other
+bookmarks
+eshell/
+request/
+games/
+abbrev_defs
