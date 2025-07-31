@@ -57,6 +57,10 @@
 ;; Highlight current line
 (global-hl-line-mode t)
 
+;; Disable bell completely
+(setq ring-bell-function 'ignore)
+(setq visible-bell nil)
+
 ;; Better scrolling
 (setq scroll-conservatively 101)      ; Scroll one line at a time
 (setq scroll-margin 5)                ; Keep 5 lines above/below cursor
@@ -231,36 +235,47 @@
 
 ;; Cape - Additional completion backends
 (use-package cape
+  :after corfu
   :bind (("C-c p p" . completion-at-point) ; capf
          ("C-c p t" . complete-tag)        ; etags
          ("C-c p d" . cape-dabbrev)        ; or dabbrev-completion
          ("C-c p h" . cape-history)
          ("C-c p f" . cape-file)
          ("C-c p k" . cape-keyword)
-         ("C-c p s" . cape-symbol)
+         ("C-c p s" . cape-elisp-symbol)   ; Use elisp-specific symbol completion
          ("C-c p a" . cape-abbrev)
-         ("C-c p i" . cape-ispell)
          ("C-c p l" . cape-line)
-         ("C-c p w" . cape-dict)
-         ("C-c p \\" . cape-tex)
-         ("C-c p _" . cape-tex)
-         ("C-c p ^" . cape-tex)
-         ("C-c p &" . cape-sgml)
-         ("C-c p r" . cape-rfc1345))
+         ("C-c p w" . cape-dict))
   :init
-  ;; Add `completion-at-point-functions', used by `completion-at-point'.
+  ;; Remove any problematic cape functions that might be lingering
+  (setq completion-at-point-functions 
+        (cl-remove-if (lambda (f) 
+                        (and (symbolp f) 
+                             (string-match-p "^cape-" (symbol-name f))))
+                      completion-at-point-functions))
+  ;; Add only the cape functions we want
   (add-to-list 'completion-at-point-functions #'cape-dabbrev)
   (add-to-list 'completion-at-point-functions #'cape-file)
-  (add-to-list 'completion-at-point-functions #'cape-history)
-  (add-to-list 'completion-at-point-functions #'cape-keyword)
-  (add-to-list 'completion-at-point-functions #'cape-tex)
-  (add-to-list 'completion-at-point-functions #'cape-sgml)
-  (add-to-list 'completion-at-point-functions #'cape-rfc1345)
-  (add-to-list 'completion-at-point-functions #'cape-abbrev)
-  (add-to-list 'completion-at-point-functions #'cape-ispell)
-  (add-to-list 'completion-at-point-functions #'cape-dict)
-  (add-to-list 'completion-at-point-functions #'cape-symbol)
-  (add-to-list 'completion-at-point-functions #'cape-line))
+  ;;(add-to-list 'completion-at-point-functions #'cape-elisp-block)
+  ;;(add-to-list 'completion-at-point-functions #'cape-history)
+  ;;(add-to-list 'completion-at-point-functions #'cape-keyword)
+  ;;(add-to-list 'completion-at-point-functions #'cape-tex)
+  ;;(add-to-list 'completion-at-point-functions #'cape-sgml)
+  ;;(add-to-list 'completion-at-point-functions #'cape-rfc1345)
+  ;;(add-to-list 'completion-at-point-functions #'cape-abbrev)
+  ;;(add-to-list 'completion-at-point-functions #'cape-dict)
+  ;;(add-to-list 'completion-at-point-functions #'cape-elisp-symbol)
+  ;;(add-to-list 'completion-at-point-functions #'cape-line)
+  :config
+  ;; Silence the pcomplete capf, no errors or messages!
+  (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-silent)
+  ;; Ensure that pcomplete does not write to the buffer
+  (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify)
+  ;; Remove cape-symbol from completion functions if it exists
+  (setq completion-at-point-functions 
+        (delq 'cape-symbol completion-at-point-functions))
+  ;; Ensure cape-symbol is never called
+  (defalias 'cape-symbol 'ignore))
 
 ;; Which-key - Shows available keybindings in a popup
 (use-package which-key
@@ -312,19 +327,14 @@
   ;; Configure logging
   (setq eglot-events-buffer-size 0))  ; Disable event logging for performance
 
-;; Enhance Eglot with Cape
-(use-package cape
-  :hook ((eglot-managed-mode . (lambda ()
-                                 (setq-local completion-at-point-functions
-                                           (list (cape-super-capf
-                                                  #'eglot-completion-at-point
-                                                  #'cape-dabbrev
-                                                  #'cape-file))))))
-  :init
-  ;; Silence the pcomplete capf, no errors or messages!
-  (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-silent)
-  ;; Ensure that pcomplete does not write to the buffer and behaves as a pure `completion-at-point-function'.
-  (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify))
+;; Configure completion for programming modes
+(defun my/eglot-capf ()
+  (setq-local completion-at-point-functions
+              (list (cape-capf-super
+                     #'eglot-completion-at-point
+                     #'cape-dabbrev))))
+
+(add-hook 'eglot-managed-mode-hook #'my/eglot-capf)
 
 ;; Tree-sitter configuration (built-in for Emacs 29+)
 (use-package treesit
@@ -403,10 +413,10 @@
         doom-themes-enable-italic t) ; if nil, italics is universally disabled
   
   ;; Load the theme (doom-one is a nice dark theme)
-  (load-theme 'doom-one t)
+  (load-theme 'doom-ir-black t)
   
   ;; Enable flashing mode-line on errors
-  (doom-themes-visual-bell-config)
+  ;; (doom-themes-visual-bell-config)  ; Disabled - visual bell is distracting
   
   ;; Corrects (and improves) org-mode's native fontification
   (doom-themes-org-config))
@@ -460,6 +470,35 @@
 (use-package all-the-icons
   :if (display-graphic-p))
 
+;; All the icons support for dired
+(use-package all-the-icons-dired
+  :hook (dired-mode . all-the-icons-dired-mode))
+
+;; Nerd icons (required by doom-modeline for proper icon display)
+(use-package nerd-icons
+  :if (display-graphic-p))
+
+;; Markdown mode
+(use-package markdown-mode
+  :ensure t
+  :commands (markdown-mode gfm-mode)
+  :mode (("README\\.md\\'" . gfm-mode)
+         ("\\.md\\'" . markdown-mode)
+         ("\\.markdown\\'" . markdown-mode))
+  :init
+  (setq markdown-command "multimarkdown")
+  :config
+  (setq markdown-enable-wiki-links t)
+  (setq markdown-italic-underscore t)
+  (setq markdown-asymmetric-header t)
+  (setq markdown-make-gfm-checkboxes-buttons t)
+  (setq markdown-gfm-uppercase-checkbox t)
+  (setq markdown-fontify-code-blocks-natively t)
+  ;; Clean up completion functions for markdown
+  :hook ((markdown-mode . (lambda ()
+                           (setq-local completion-at-point-functions
+                                     (cl-remove 'cape-symbol completion-at-point-functions))))))
+
 ;; Additional visual enhancements
 (use-package highlight-indent-guides
   :hook (prog-mode . highlight-indent-guides-mode)
@@ -511,6 +550,11 @@
 (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
 (when (file-exists-p custom-file)
   (load custom-file))
+
+;; Force markdown-mode association after all other configurations
+(add-to-list 'auto-mode-alist '("\\.md\\'" . markdown-mode))
+(add-to-list 'auto-mode-alist '("\\.markdown\\'" . markdown-mode))
+(add-to-list 'auto-mode-alist '("README\\.md\\'" . gfm-mode))
 
 (provide 'init)
 ;;; init.el ends here
