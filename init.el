@@ -115,6 +115,26 @@
 ;; Electric pair mode - auto-close brackets
 (electric-pair-mode 1)
 
+;; Add more pairs for electric-pair-mode
+(setq electric-pair-pairs
+      '((?\" . ?\")     ; double quotes
+        (?\' . ?\')     ; single quotes
+        (?\` . ?\`)     ; backticks
+        (?\{ . ?\})     ; curly braces
+        (?\[ . ?\])     ; square brackets
+        (?\( . ?\))     ; parentheses
+        (?\" . ?\")     ; fancy left/right double quotes
+        (?\' . ?\')     ; fancy left/right single quotes
+        (?\« . ?\»)))   ; guillemets
+
+;; Also add text mode pairs
+(setq electric-pair-text-pairs
+      '((?\" . ?\")     ; double quotes
+        (?\' . ?\')     ; single quotes
+        (?\` . ?\`)     ; backticks
+        (?\" . ?\")     ; fancy quotes
+        (?\' . ?\')))
+
 ;; Better help
 (setq help-window-select t)          ; Focus help window when opened
 
@@ -248,9 +268,9 @@
          ("C-c p w" . cape-dict))
   :init
   ;; Remove any problematic cape functions that might be lingering
-  (setq completion-at-point-functions 
-        (cl-remove-if (lambda (f) 
-                        (and (symbolp f) 
+  (setq completion-at-point-functions
+        (cl-remove-if (lambda (f)
+                        (and (symbolp f)
                              (string-match-p "^cape-" (symbol-name f))))
                       completion-at-point-functions))
   ;; Add only the cape functions we want
@@ -272,7 +292,7 @@
   ;; Ensure that pcomplete does not write to the buffer
   (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify)
   ;; Remove cape-symbol from completion functions if it exists
-  (setq completion-at-point-functions 
+  (setq completion-at-point-functions
         (delq 'cape-symbol completion-at-point-functions))
   ;; Ensure cape-symbol is never called
   (defalias 'cape-symbol 'ignore))
@@ -319,11 +339,11 @@
   (setq eglot-autoshutdown t)  ; Shutdown language server after closing last file
   (setq eglot-sync-connect 1)  ; Wait 1 second for server to start
   (setq eglot-connect-timeout 10)  ; 10 second connection timeout
-  
+
   ;; Disable specific features for performance
   (setq eglot-ignored-server-capabilities
         '(:documentHighlightProvider))  ; Can be slow in large files
-  
+
   ;; Configure logging
   (setq eglot-events-buffer-size 0))  ; Disable event logging for performance
 
@@ -361,7 +381,7 @@
           (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
           (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
           (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
-  
+
   ;; Remap major modes to use tree-sitter variants when available
   (setq major-mode-remap-alist
         '((yaml-mode . yaml-ts-mode)
@@ -411,13 +431,13 @@
   ;; Global settings (defaults)
   (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
         doom-themes-enable-italic t) ; if nil, italics is universally disabled
-  
+
   ;; Load the theme (doom-one is a nice dark theme)
   (load-theme 'doom-ir-black t)
-  
+
   ;; Enable flashing mode-line on errors
   ;; (doom-themes-visual-bell-config)  ; Disabled - visual bell is distracting
-  
+
   ;; Corrects (and improves) org-mode's native fontification
   (doom-themes-org-config))
 
@@ -499,6 +519,89 @@
                            (setq-local completion-at-point-functions
                                      (cl-remove 'cape-symbol completion-at-point-functions))))))
 
+;; Org mode - Replace built-in with latest version
+(use-package org
+  :straight (:type git :repo "https://code.orgmode.org/bzg/org-mode.git"
+             :local-repo "org" :depth full
+             :pre-build (straight-recipes-org-elpa--build)
+             :build (:not autoloads)
+             :files (:defaults "lisp/*.el" ("etc/styles/" "etc/styles/*")))
+  :bind (("C-c o l" . org-store-link)
+         ("C-c o a" . org-agenda)
+         ("C-c o c" . org-capture)
+         ("C-c o b" . org-switchb))
+  :config
+  ;; Configure TODO states
+  (setq org-todo-keywords
+        '((sequence "READY(r)" "RUNNING(n)" "|" "RETURNED(d)")
+          (sequence "BLOCKED(b)" "|" "ERRORED(e)")))
+
+  ;; Configure TODO keyword faces
+  (setq org-todo-keyword-faces
+        '(("READY" . (:foreground "orange" :weight bold))
+          ("RUNNING" . (:foreground "cyan" :weight bold))
+          ("BLOCKED" . (:foreground "red" :weight bold))
+          ("ERRORED" . (:foreground "red" :weight bold :underline t))
+          ("RETURNED" . (:foreground "green" :weight bold))))
+
+  ;; Basic org settings
+  (setq org-log-done 'time)  ; Log time when task is done
+  (setq org-log-into-drawer t)  ; Log into LOGBOOK drawer
+  (setq org-hide-leading-stars t)  ; Hide extra stars in headings
+  (setq org-adapt-indentation nil)  ; Don't indent text with heading level
+  (setq org-startup-folded 'content)  ; Show only top-level headings initially
+  (setq org-ellipsis " ")  ; Just a space, no visual indicator
+
+  ;; Org directory and files
+  (setq org-directory "~/org/")
+  (setq org-default-notes-file (concat org-directory "notes.org"))
+  (setq org-agenda-files (list org-directory))
+
+  ;; Create org directory if it doesn't exist
+  (unless (file-exists-p org-directory)
+    (make-directory org-directory t))
+
+  ;; Configure capture templates
+  (setq org-capture-templates
+        '(("t" "TODO" entry (file+headline org-default-notes-file "Tasks")
+           "* READY %?\n  %u\n  %a")
+          ("c" "CODE" entry (file+headline org-default-notes-file "Code Review")
+           "* CODE %?\n  %u\n  From: [[file:%F::%l][%f:%l]]\n  #+begin_src %m\n%i\n  #+end_src")))
+
+  ;; Enable speed keys at beginning of headings
+  (setq org-use-speed-commands t)
+
+  ;; Configure some useful speed keys
+  (setq org-speed-commands-user
+        '(("s" . org-narrow-to-subtree)
+          ("w" . widen)
+          ("u" . org-up-element)
+          ("j" . org-next-heading)
+          ("k" . org-previous-heading)
+          ("n" . org-todo)  ; Cycle through TODO states
+          ("r" . (lambda () (interactive) (org-todo "READY")))
+          ("R" . (lambda () (interactive) (org-todo "RUNNING")))
+          ("b" . (lambda () (interactive) (org-todo "BLOCKED")))
+          ("e" . (lambda () (interactive) (org-todo "ERRORED")))
+          ("d" . (lambda () (interactive) (org-todo "RETURNED")))))
+
+  ;; Better code block editing
+  (setq org-src-fontify-natively t)  ; Syntax highlighting in code blocks
+  (setq org-src-tab-acts-natively t)  ; Tab works as in major mode
+  (setq org-src-window-setup 'current-window)  ; Edit in current window
+  (setq org-src-preserve-indentation t)  ; Preserve indentation
+
+  ;; Enable some org modules
+  (setq org-modules '(org-tempo))  ; Enable <s TAB for src blocks
+  (org-load-modules-maybe t)
+
+  ;; Quick insertion of code blocks
+  (with-eval-after-load 'org
+    (require 'org-tempo)
+    (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
+    (add-to-list 'org-structure-template-alist '("py" . "src python"))
+    (add-to-list 'org-structure-template-alist '("sh" . "src shell"))))
+
 ;; Additional visual enhancements
 (use-package highlight-indent-guides
   :hook (prog-mode . highlight-indent-guides-mode)
@@ -519,14 +622,12 @@
   :config
   (setq aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l)))
 
-;; Undo tree visualization
-(use-package undo-tree
-  :init
-  (global-undo-tree-mode)
+;; Vundo - Visual undo tree
+(use-package vundo
+  :ensure t
+  :bind ("C-x u" . vundo)
   :config
-  (setq undo-tree-visualizer-timestamps t)
-  (setq undo-tree-visualizer-diff t)
-  (setq undo-tree-history-directory-alist '(("." . "~/.emacs.d/undo"))))
+  (setq vundo-glyph-alist vundo-unicode-symbols))
 
 ;; Better terminal emulation
 (use-package vterm

@@ -35,8 +35,15 @@
 - *Highlight Indent Guides*: Visual indentation guides
 - *Smooth Scrolling*: Better scrolling experience
 - *Ace Window*: Quick window switching
-- *Undo Tree*: Visual undo history
+- *Vundo*: Visual undo tree navigation
 - *Vterm*: Full terminal emulation
+- *Markdown Mode*: Enhanced markdown editing with GitHub Flavored Markdown support
+
+** Organization & Note-Taking
+- *Org Mode*: Latest version with custom configuration
+- *Custom TODO States*: READY, RUNNING, BLOCKED, ERRORED, RETURNED with color coding
+- *Capture Templates*: Quick capture for TODOs and code snippets
+- *Speed Keys*: Fast navigation and state changes at beginning of headings
 
 * Requirements
 
@@ -62,7 +69,8 @@
 ├── backups/         # Backup files (auto-created)
 ├── auto-saves/      # Auto-save files (auto-created)
 ├── undo/            # Undo history (auto-created)
-└── custom.el        # Customizations (auto-created)
+├── custom.el        # Customizations (auto-created)
+└── org/             # Org files directory (auto-created)
 #+end_example
 
 * Key Bindings
@@ -115,6 +123,24 @@ When in a file with LSP support:
 - =C-h F= - Describe function
 - =C-h C= - Describe command
 
+** Org Mode
+- =C-c o c= - Capture (then =t= for TODO, =c= for CODE)
+- =C-c o a= - Agenda
+- =C-c o l= - Store link
+- =C-c o b= - Switch org buffer
+- =C-x u= - Visual undo tree (vundo)
+
+*** Speed Keys (at beginning of org headings)
+- =j/k= - Next/previous heading
+- =u= - Up to parent
+- =s/w= - Narrow/widen to subtree
+- =n= - Cycle TODO states
+- =r= - Set to READY
+- =R= - Set to RUNNING
+- =b= - Set to BLOCKED
+- =e= - Set to ERRORED
+- =d= - Set to RETURNED
+
 ** Terminal
 - =M-x vterm= - Open terminal emulator
 
@@ -137,7 +163,7 @@ To install tree-sitter grammars for enhanced syntax highlighting:
 
 * Theme Customization
 
-The configuration uses =doom-one= theme by default. To change themes:
+The configuration uses =doom-ir-black= theme by default. To change themes:
 1. Browse available themes with =M-x consult-theme=
 2. To make permanent, add to your =custom.el=:
    #+begin_src emacs-lisp
@@ -145,7 +171,7 @@ The configuration uses =doom-one= theme by default. To change themes:
    #+end_src
 
 Available doom themes include:
-- =doom-one= (default)
+- =doom-ir-black= (default)
 - =doom-one-light=
 - =doom-dracula=
 - =doom-monokai-pro=
@@ -179,6 +205,29 @@ alias e="emacsclient -n"
 alias et="emacsclient -t"
 alias ec="emacsclient -c"
 #+end_src
+
+* Org Mode Configuration
+
+** Capture Templates
+The configuration includes two capture templates accessible via =C-c o c=:
+- =t= (TODO): Creates a new task with READY state under "Tasks" heading
+- =c= (CODE): Captures code snippets with file location links under "Code Review" heading
+
+** TODO States
+Custom TODO workflow states with keyboard shortcuts:
+| State    | Key | Description                     | Color  |
+|----------+-----+---------------------------------+--------|
+| READY    | r   | Task is ready to be worked on   | Orange |
+| RUNNING  | n   | Task is currently being worked  | Cyan   |
+| BLOCKED  | b   | Task is blocked by something    | Red    |
+| ERRORED  | e   | Task encountered an error       | Red    |
+| RETURNED | d   | Task is completed/returned      | Green  |
+
+** Organization
+- All org files are stored in =~/org/=
+- Default capture file is =~/org/notes.org=
+- Tasks are organized under the "Tasks" heading
+- Code snippets are organized under the "Code Review" heading
 
 * Customization
 
