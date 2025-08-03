@@ -57,7 +57,7 @@
 2. Start Emacs - packages will be automatically installed on first run
 3. Restart Emacs after the initial setup completes
 4. (Optional) Run =M-x all-the-icons-install-fonts= to install icon fonts
-5. (Optional) Run =M-x my/install-treesit-grammars= to install tree-sitter grammars
+5. (Optional) Run =M-x my/install-all-tree-sitter-grammars= to install and compress tree-sitter grammars
 
 * Directory Structure
 
@@ -157,9 +157,15 @@ Eglot will automatically start LSP servers for supported languages. Make sure yo
 
 ** Tree-sitter Grammars
 To install tree-sitter grammars for enhanced syntax highlighting:
-1. Run =M-x my/install-treesit-grammars=
+1. Run =M-x my/install-all-tree-sitter-grammars= (installs and compresses all grammars)
 2. Restart Emacs
 3. Supported languages will automatically use tree-sitter modes
+
+*** Additional Commands
+- =M-x my/check-tree-sitter-installation= - Check which grammars are installed
+- =C-c t i= - Install all grammars (shortcut for =my/install-all-tree-sitter-grammars=)
+- =C-c t c= - Check installation status
+- =C-c t s= - Compress existing grammars
 
 * Theme Customization
 

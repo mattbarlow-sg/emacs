@@ -108,6 +108,7 @@
 (setq-default truncate-lines t)      ; Don't wrap lines by default
 (setq-default indent-tabs-mode nil)  ; Use spaces instead of tabs
 (setq-default tab-width 4)           ; Set width of tabs
+(setq-default fill-column 90)       ; Set default text wrap width to 90 columns
 
 ;; Show matching parentheses
 (show-paren-mode 1)
@@ -405,6 +406,9 @@
   (interactive)
   (mapc #'treesit-install-language-grammar
         (mapcar #'car treesit-language-source-alist)))
+
+;; Load advanced tree-sitter installation functions
+(load (expand-file-name "install-tree-sitter-grammars" user-emacs-directory) t)
 
 ;; Additional programming utilities
 (use-package electric
