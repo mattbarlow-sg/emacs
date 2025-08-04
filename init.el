@@ -663,7 +663,7 @@
                   ;; Only sort if there are headings
                   (when (re-search-forward org-heading-regexp nil t)
                     (goto-char (point-min))
-                    (org-sort-entries nil ?o))))))
+                    (org-sort-entries nil ?o)))))))
 
 ;; Additional visual enhancements
 (use-package highlight-indent-guides
