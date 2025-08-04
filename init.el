@@ -400,13 +400,6 @@
           (c++-mode . c++-ts-mode)
           (java-mode . java-ts-mode))))
 
-;; Function to install tree-sitter grammars
-(defun my/install-treesit-grammars ()
-  "Install all configured tree-sitter grammars."
-  (interactive)
-  (mapc #'treesit-install-language-grammar
-        (mapcar #'car treesit-language-source-alist)))
-
 ;; Load advanced tree-sitter installation functions
 (load (expand-file-name "install-tree-sitter-grammars" user-emacs-directory) t)
 
@@ -604,7 +597,73 @@
     (require 'org-tempo)
     (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
     (add-to-list 'org-structure-template-alist '("py" . "src python"))
-    (add-to-list 'org-structure-template-alist '("sh" . "src shell"))))
+    (add-to-list 'org-structure-template-alist '("sh" . "src shell")))
+
+  ;; Auto-sort TODO items by status
+  (defun my/org-sort-todos-by-status ()
+    "Sort TODO items in the current subtree by their TODO status."
+    (interactive)
+    (save-excursion
+      ;; First ensure we're at a heading
+      (unless (org-at-heading-p)
+        (org-back-to-heading t))
+      ;; Check if we have children to sort
+      (let ((has-children (save-excursion
+                           (org-goto-first-child))))
+        (if has-children
+            ;; We have children, sort them
+            (org-sort-entries nil ?o)
+          ;; No children, try parent
+          (when (org-up-heading-safe)
+            (org-sort-entries nil ?o))))))
+
+  ;; Auto-sort function that works with narrowed buffers
+  (defun my/org-auto-sort-todos ()
+    "Automatically sort TODOs when changing TODO state."
+    (when (eq major-mode 'org-mode)
+      (save-excursion
+        (let ((current-pos (point))
+              (current-heading (org-get-heading t t t t)))
+          ;; Ensure we're at a heading
+          (unless (org-at-heading-p)
+            (org-back-to-heading t))
+          ;; Always go to parent to sort siblings
+          (if (org-up-heading-safe)
+              ;; We have a parent, sort its children
+              (progn
+                (message "Sorting children under: %s" (org-get-heading t t t t))
+                (org-sort-entries nil ?o))
+            ;; No parent, we're at top level
+            ;; Go to first heading and sort all top-level entries
+            (progn
+              (goto-char (point-min))
+              ;; Find first heading
+              (if (re-search-forward "^\\*+\\s-" nil t)
+                  (progn
+                    (beginning-of-line)
+                    (message "Sorting top-level entries")
+                    (org-sort-entries nil ?o))
+                (message "No headings found to sort"))))
+          ;; Try to return to the original heading
+          (goto-char (point-min))
+          (when (search-forward current-heading nil t)
+            (beginning-of-line))))))
+
+  ;; Hook to auto-sort after TODO state change
+  (add-hook 'org-after-todo-state-change-hook #'my/org-auto-sort-todos)
+
+  ;; Optional: Auto-sort when opening org files
+  (add-hook 'find-file-hook
+            (lambda ()
+              (when (and (eq major-mode 'org-mode)
+                         buffer-file-name
+                         (file-exists-p buffer-file-name))
+                (save-excursion
+                  (goto-char (point-min))
+                  ;; Only sort if there are headings
+                  (when (re-search-forward org-heading-regexp nil t)
+                    (goto-char (point-min))
+                    (org-sort-entries nil ?o))))))
 
 ;; Additional visual enhancements
 (use-package highlight-indent-guides
