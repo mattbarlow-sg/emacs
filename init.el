@@ -45,6 +45,27 @@
 (column-number-mode)                  ; Show column number in mode line
 (global-display-line-numbers-mode t)  ; Show line numbers in all buffers
 
+;; Configure line numbers to have consistent width with leading zeros
+(setq display-line-numbers-width-start t)  ; Calculate width based on file size
+(setq display-line-numbers-width 4)        ; Minimum width of 4 digits
+
+;; Custom function to format line numbers with leading zeros
+(defun my/format-line-numbers ()
+  "Configure line numbers to show with leading zeros."
+  (when display-line-numbers
+    (setq-local display-line-numbers-width
+                (max 4 (length (number-to-string
+                              (count-lines (point-min) (point-max))))))))
+
+;; Apply formatting to all buffers
+(add-hook 'find-file-hook #'my/format-line-numbers)
+(add-hook 'after-change-functions
+          (lambda (&rest _)
+            (when (and display-line-numbers
+                       (zerop (% (line-number-at-pos) 100)))
+              (my/format-line-numbers)))
+          nil t)
+
 ;; Disable line numbers for some modes
 (dolist (mode '(org-mode-hook
                 term-mode-hook
