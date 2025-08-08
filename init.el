@@ -341,13 +341,21 @@
 (use-package eglot
   :straight nil  ; Built-in package
   :hook ((python-mode . eglot-ensure)
+         (python-ts-mode . eglot-ensure)
          (js-mode . eglot-ensure)
+         (js-ts-mode . eglot-ensure)
          (typescript-mode . eglot-ensure)
+         (typescript-ts-mode . eglot-ensure)
          (rust-mode . eglot-ensure)
+         (rust-ts-mode . eglot-ensure)
          (go-mode . eglot-ensure)
+         (go-ts-mode . eglot-ensure)
          (c-mode . eglot-ensure)
+         (c-ts-mode . eglot-ensure)
          (c++-mode . eglot-ensure)
-         (java-mode . eglot-ensure))
+         (c++-ts-mode . eglot-ensure)
+         (java-mode . eglot-ensure)
+         (java-ts-mode . eglot-ensure))
   :bind (:map eglot-mode-map
          ("C-c l r" . eglot-rename)
          ("C-c l a" . eglot-code-actions)
@@ -421,6 +429,26 @@
           (c-mode . c-ts-mode)
           (c++-mode . c++-ts-mode)
           (java-mode . java-ts-mode))))
+
+;; Configure auto-mode-alist for file extensions
+;; These will be automatically remapped to tree-sitter variants via major-mode-remap-alist
+(add-to-list 'auto-mode-alist '("\\.go\\'" . go-mode))
+(add-to-list 'auto-mode-alist '("\\.py\\'" . python-mode))
+(add-to-list 'auto-mode-alist '("\\.rs\\'" . rust-mode))
+(add-to-list 'auto-mode-alist '("\\.js\\'" . js-mode))
+(add-to-list 'auto-mode-alist '("\\.ts\\'" . typescript-mode))
+(add-to-list 'auto-mode-alist '("\\.tsx\\'" . typescript-mode))
+(add-to-list 'auto-mode-alist '("\\.json\\'" . json-mode))
+(add-to-list 'auto-mode-alist '("\\.css\\'" . css-mode))
+(add-to-list 'auto-mode-alist '("\\.ya?ml\\'" . yaml-mode))
+(add-to-list 'auto-mode-alist '("\\.sh\\'" . bash-mode))
+(add-to-list 'auto-mode-alist '("\\.c\\'" . c-mode))
+(add-to-list 'auto-mode-alist '("\\.cpp\\'" . c++-mode))
+(add-to-list 'auto-mode-alist '("\\.cc\\'" . c++-mode))
+(add-to-list 'auto-mode-alist '("\\.cxx\\'" . c++-mode))
+(add-to-list 'auto-mode-alist '("\\.h\\'" . c-mode))
+(add-to-list 'auto-mode-alist '("\\.hpp\\'" . c++-mode))
+(add-to-list 'auto-mode-alist '("\\.java\\'" . java-mode))
 
 ;; Load advanced tree-sitter installation functions
 (load (expand-file-name "install-tree-sitter-grammars" user-emacs-directory) t)
