@@ -10,6 +10,37 @@
 ;; Performance optimization during startup
 (setq gc-cons-threshold (* 50 1000 1000))  ; 50MB
 
+;; Function keys are precious. Unbind all function keys (F1-F12) globally This allows the
+;; OS to handle them instead
+(dotimes (i 12)
+  (let ((key (intern (format "<f%d>" (1+ i)))))
+    (global-unset-key (vector key))
+    ;; Also unbind with modifiers
+    (global-unset-key (vector (list 'shift key)))
+    (global-unset-key (vector (list 'control key)))
+    (global-unset-key (vector (list 'meta key)))
+    (global-unset-key (vector (list 'super key)))))
+
+
+;; Specifically unbind common F-key sequences
+;; Hopefully someday I can find a good keyboard with 24 function keys
+(global-unset-key (kbd "<f1>"))   ; help
+(global-unset-key (kbd "<f2>"))   ; 2-column mode
+(global-unset-key (kbd "<f3>"))   ; kmacro-start-macro-or-insert-counter
+(global-unset-key (kbd "<f4>"))   ; kmacro-end-or-call-macro
+(global-unset-key (kbd "<f5>"))   ; often used for refresh
+(global-unset-key (kbd "<f6>"))   ; other-window
+(global-unset-key (kbd "<f7>"))   ; often used for spell check
+(global-unset-key (kbd "<f8>"))   ; often used for formatting
+(global-unset-key (kbd "<f9>"))   ; compile
+(global-unset-key (kbd "<f10>"))  ; menu-bar
+(global-unset-key (kbd "<f11>"))  ; toggle-frame-fullscreen
+(global-unset-key (kbd "<f12>"))  ; often custom bound
+
+;; Unbind C-o from everything and bind it to other-window
+(global-unset-key (kbd "C-o"))     ; Unbind C-o globally
+(global-set-key (kbd "C-o") 'other-window)  ; Bind C-o to other-window
+
 ;; Package management with straight.el
 (defvar bootstrap-version)
 (let ((bootstrap-file
@@ -110,6 +141,20 @@
 (make-directory (expand-file-name "auto-saves" user-emacs-directory) t)
 (make-directory (expand-file-name "undo" user-emacs-directory) t)
 
+;; Experimental
+(setq select-enable-clipboard t)
+(straight-use-package 'diff-hl)
+(global-diff-hl-mode)
+(diff-hl-flydiff-mode)
+(diff-hl-margin-mode)  ; Use margin instead of fringe
+;; (straight-use-package 'diff-hl)
+;; (global-diff-hl-mode)
+;; (diff-hl-flydiff-mode) ; Show changes without saving
+
+(with-eval-after-load 'magit
+  (add-hook 'magit-pre-refresh-hook 'diff-hl-magit-pre-refresh)
+  (add-hook 'magit-post-refresh-hook 'diff-hl-magit-post-refresh))
+
 ;; Recent files
 (use-package recentf
   :straight nil  ; Built-in package
@@ -193,7 +238,9 @@
 
 ;; Consult - Enhanced search and navigation commands
 (use-package consult
-  :bind (;; C-c bindings (mode-specific-map)
+  :bind (;; C-s binding for consult-find
+         ("C-s" . consult-line)
+         ;; C-c bindings (mode-specific-map)
          ("C-c h" . consult-history)
          ("C-c m" . consult-mode-command)
          ("C-c k" . consult-kmacro)
@@ -387,6 +434,15 @@
 
 (add-hook 'eglot-managed-mode-hook #'my/eglot-capf)
 
+;; Install markdown-mode with straight
+(straight-use-package 'markdown-mode)
+
+;; Make sure it's loaded and configured
+(require 'markdown-mode)
+(add-to-list 'auto-mode-alist '("\\.md\\'" . markdown-mode))
+(add-to-list 'auto-mode-alist '("\\.markdown\\'" . markdown-mode))
+(add-to-list 'auto-mode-alist '("README\\.md\\'" . gfm-mode))
+
 ;; Tree-sitter configuration (built-in for Emacs 29+)
 (use-package treesit
   :straight nil  ; Built-in package
@@ -479,8 +535,8 @@
   (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
         doom-themes-enable-italic t) ; if nil, italics is universally disabled
 
-  ;; Load the theme (doom-one is a nice dark theme)
-  (load-theme 'doom-ir-black t)
+  ;; Load the theme (modus-operandi is a high-contrast light theme)
+  (load-theme 'modus-operandi t)
 
   ;; Enable flashing mode-line on errors
   ;; (doom-themes-visual-bell-config)  ; Disabled - visual bell is distracting
@@ -576,6 +632,7 @@
   :bind (("C-c o l" . org-store-link)
          ("C-c o a" . org-agenda)
          ("C-c o c" . org-capture)
+         ("C-c c" . org-capture)  ; Quick access to capture
          ("C-c o b" . org-switchb))
   :config
   ;; Configure TODO states
@@ -611,8 +668,8 @@
   ;; Configure capture templates
   (setq org-capture-templates
         '(("t" "TODO" entry (file+headline org-default-notes-file "Tasks")
-           "* READY %?\n  %u\n  %a")
-          ("c" "CODE" entry (file+headline org-default-notes-file "Code Review")
+           "* READY %?\n  %u")
+          ("c" "READY" entry (file+headline org-default-notes-file "Code Review")
            "* CODE %?\n  %u\n  From: [[file:%F::%l][%f:%l]]\n  #+begin_src %m\n%i\n  #+end_src")))
 
   ;; Enable speed keys at beginning of headings
@@ -642,7 +699,7 @@
   (setq org-modules '(org-tempo))  ; Enable <s TAB for src blocks
   (org-load-modules-maybe t)
 
-  ;; Quick insertion of code blocks
+ ;; Quick insertion of code blocks
   (with-eval-after-load 'org
     (require 'org-tempo)
     (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
